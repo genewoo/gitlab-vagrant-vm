@@ -185,7 +185,71 @@ execute "gitlab-bundle-install" do
   user 'root'
 end
 
+directory "#{node['gitlab']['repos_path']}" do
+  user 'root'
+  recursive true
+  action :delete
+  not_if { File.exists?("#{node['gitlab']['home']}/.vagrant_seed") }
+end
+
+# create root folder for dev setup
+directory "#{node['gitlab']['repos_path']}" do
+  owner node['gitlab']['user']
+  group node['gitlab']['group']
+  mode "0755"
+  recursive true
+  action :create
+end
+
+directory "#{node['gitlab']['repos_path']}/root" do
+  owner node['gitlab']['user']
+  group node['gitlab']['group']
+  mode "0755"
+  recursive true
+  action :create
+end
+
+directory "#{node['gitlab']['app_home']}/log" do
+  user 'root'
+  recursive true
+  action :delete
+  not_if { File.exists?("#{node['gitlab']['home']}/.vagrant_seed") }
+end
+
+directory "#{node['gitlab']['app_home']}/log" do
+  owner node['gitlab']['user']
+  group node['gitlab']['group']
+  mode "0755"
+  action :create
+end
+
+directory "#{node['gitlab']['app_home']}/tmp" do
+  user 'root'
+  recursive true
+  action :delete
+  not_if { File.exists?("#{node['gitlab']['home']}/.vagrant_seed") }
+end
+
+directory "#{node['gitlab']['app_home']}/tmp" do
+  owner node['gitlab']['user']
+  group node['gitlab']['group']
+  mode "0755"
+  action :create
+end
+
+user "git" do
+  home "/home/git"
+  action :create
+end
+
 %w{ development test }.each do |env|
+  
+  mysql_database "drop-#{env}-schema" do
+    connection mysql_connexion
+    sql "drop schema gitlabhq_${env}"
+    action :query
+  end
+
   # Setup database
   execute "gitlab-#{env}-setup" do
     command "su -l -c 'cd #{node['gitlab']['app_home']} && bundle exec rake db:setup RAILS_ENV=#{env}' vagrant"
